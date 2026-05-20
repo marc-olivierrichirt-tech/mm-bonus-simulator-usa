@@ -4,24 +4,6 @@ import pandas as pd
 # Page configuration
 st.set_page_config(page_title="MM Team Incentives & Rules Bible", layout="wide")
 
-# --- INITIALIZATION & REFRESH TO ZERO ---
-# Ce bloc vérifie si c'est un nouveau rafraîchissement. 
-# Si oui, il initialise ou réinitialise toutes les valeurs à 0.
-if "init_done" not in st.session_state:
-    st.session_state["init_done"] = True
-    st.session_state["file_key"] = 0  # Permet de vider le composant d'import de fichier
-    
-    # Initialisation de toutes les métriques à 0
-    st.session_state["inputs"] = {
-        "Andres": {"iam": 0, "dia": 0, "central": 0, "direct": 0, "pos": 0},
-        "Conor": {"iam": 0, "dia": 0, "central": 0, "direct": 0, "pos": 0},
-        "Garrett": {"iam": 0, "dia": 0, "central": 0, "direct": 0, "pos": 0}
-    }
-
-# --- SIDEBAR NAVIGATION ---
-st.sidebar.title("📌 Navigation")
-app_mode = st.sidebar.radio("Go to:", ["1. Rules Bible (Règles)", "2. Live Calculator (Calculateur)"])
-
 # --- CORE FUNCTIONS & CONSTANTS ---
 def get_individual_payout_percentage(vehicles):
     if vehicles >= 104: return 150
@@ -52,6 +34,16 @@ BONUS_100_ANDRES = 2914
 BONUS_100_CONOR = 3045
 BONUS_100_GARRETT = 4921
 
+# --- INITIALIZATION & REFRESH TO ZERO ---
+if "init_done" not in st.session_state:
+    st.session_state["init_done"] = True
+    st.session_state["uploader_key"] = 0
+    st.session_state["df_data"] = None
+
+# --- SIDEBAR NAVIGATION ---
+st.sidebar.title("📌 Navigation")
+app_mode = st.sidebar.radio("Go to:", ["1. Rules Bible (Règles)", "2. Live Calculator (Calculateur)"])
+
 # ==========================================
 # TAB 1: RULES BIBLE
 # ==========================================
@@ -80,22 +72,6 @@ if app_mode == "1. Rules Bible (Règles)":
         }
         st.table(pd.DataFrame(mgr_grid_data))
 
-    st.markdown("---")
-    st.header("2. Hunter Accelerator & Growth Scale")
-    
-    st.subheader("🤠 For Mobility Managers (Andres & Conor)")
-    st.write("• Triggers from **Vehicle #126** onwards, **ONLY** on **Direct MM** units.")
-    st.write("• **Condition:** Must personally sign at least **5 POS** during the quarter.")
-    
-    st.subheader("🦅 For the Manager (Garrett) - Dual Hunter Track")
-    st.write("**Track A: Team Growth Multiplier (Managership)**")
-    st.write("• Multiplier based **ONLY** on the Combined Direct MM Units of Andres + Conor.")
-    st.write("• *Condition:* The 2 MMs combined must sign at least **10 POS**.")
-    st.write("")
-    st.write("**Track B: Personal Cash Accelerator (Hunter)**")
-    st.write("• Garrett earns **$100/car** from his **126th personal vehicle**.")
-    st.write("• **STRICT GLOBAL CONDITION:** This bonus is only unlocked if Team USA (Andres + Conor + Garrett) signs a minimum of **15 POS total**.")
-
 # ==========================================
 # TAB 2: LIVE CALCULATOR
 # ==========================================
@@ -103,19 +79,22 @@ else:
     st.title("📊 Live Performance & Commission Calculator")
     st.write("Upload a file (Excel/CSV) or adjust variables manually to compute quarterly sales rewards.")
     
-    # --- FILE UPLOADER COMPONENT ---
     st.markdown("### 📂 Data Import (Optionnel)")
     
-    # Le paramètre key=st.session_state["file_key"] permet de forcer la disparition du fichier au refresh
     uploaded_file = st.file_uploader(
         "Glisse ton fichier Excel (.xlsx) ou CSV (.csv) ici :", 
         type=["csv", "xlsx"], 
-        key=f"uploader_{st.session_state['file_key']}"
+        key=f"csv_uploader_{st.session_state['uploader_key']}"
     )
     
+    # Valeurs par défaut (Remises à 0 automatique au refresh)
     data_source = "Saisie Manuelle"
+    default_vals = {
+        "Andres": {"iam": 0, "dia": 0, "central": 0, "direct": 0, "pos": 0},
+        "Conor": {"iam": 0, "dia": 0, "central": 0, "direct": 0, "pos": 0},
+        "Garrett": {"iam": 0, "dia": 0, "central": 0, "direct": 0, "pos": 0}
+    }
 
-    # Si un fichier est déposé, on extrait les données et on met à jour la session
     if uploaded_file is not None:
         try:
             if uploaded_file.name.endswith('.csv'):
@@ -124,6 +103,7 @@ else:
                 df = pd.read_excel(uploaded_file)
             
             df = df.dropna(how='all')
+            # Nettoyage strict des en-têtes de colonnes
             df.columns = [str(c).strip().replace('_', '').replace(' ', '').lower() for c in df.columns]
             
             required_cleaned = ["collaborateur", "iam", "dia", "centralassisted", "directsales", "possigned"]
@@ -135,52 +115,53 @@ else:
                 st.info("🔍 **Aperçu technique du tableau lu par la machine :**")
                 st.dataframe(df[required_cleaned])
                 
+                # Remplissage des valeurs extraites du fichier
                 for name in ["Andres", "Conor", "Garrett"]:
                     row = df[df["collaborateur"] == name.lower()]
                     if not row.empty:
-                        st.session_state["inputs"][name] = {
+                        default_vals[name] = {
                             "iam": int(pd.to_numeric(row["iam"].values[0], errors='coerce') or 0),
                             "dia": int(pd.to_numeric(row["dia"].values[0], errors='coerce') or 0),
                             "central": int(pd.to_numeric(row["centralassisted"].values[0], errors='coerce') or 0),
                             "direct": int(pd.to_numeric(row["directsales"].values[0], errors='coerce') or 0),
                             "pos": int(pd.to_numeric(row["possigned"].values[0], errors='coerce') or 0)
                         }
-                st.success(f"✅ Extraction terminée avec succès depuis : {data_source}")
+                st.success(f"✅ Données synchronisées avec succès depuis : {data_source}")
             else:
-                st.error("❌ Erreur de format : Les colonnes doivent être : Collaborateur, IAM, DIA, Central_Assisted, Direct_Sales, POS_Signed")
+                st.error("❌ Erreur de format de colonnes.")
         except Exception as e:
-            st.error(f"❌ Impossible de lire le fichier : {str(e)}")
+            st.error(f"❌ Erreur lors de la lecture : {str(e)}")
 
     st.markdown("---")
     st.subheader(f"🚗 Performance Inputs ({data_source})")
     
-    # Input boxes connectées aux variables de session (qui valent 0 au refresh)
+    # Création des formulaires de saisie synchronisés
     c1, c2, c3 = st.columns(3)
     with c1:
         st.markdown("#### 👤 Andres Metrics")
-        a_iam = st.number_input("Andres - IAM Deals", min_value=0, value=st.session_state["inputs"]["Andres"]["iam"], key="n_a_iam")
-        a_dia = st.number_input("Andres - DIA Deals", min_value=0, value=st.session_state["inputs"]["Andres"]["dia"], key="n_a_dia")
-        a_central = st.number_input("Andres - Central Assisted", min_value=0, value=st.session_state["inputs"]["Andres"]["central"], key="n_a_cent")
-        a_direct = st.number_input("Andres - DIRECT MM Units", min_value=0, value=st.session_state["inputs"]["Andres"]["direct"], key="n_a_dir")
-        a_pos = st.number_input("Andres - POS Signed", min_value=0, value=st.session_state["inputs"]["Andres"]["pos"], key="n_a_pos")
+        a_iam = st.number_input("Andres - IAM Deals", min_value=0, value=default_vals["Andres"]["iam"])
+        a_dia = st.number_input("Andres - DIA Deals", min_value=0, value=default_vals["Andres"]["dia"])
+        a_central = st.number_input("Andres - Central Assisted", min_value=0, value=default_vals["Andres"]["central"])
+        a_direct = st.number_input("Andres - DIRECT MM Units", min_value=0, value=default_vals["Andres"]["direct"])
+        a_pos = st.number_input("Andres - POS Signed", min_value=0, value=default_vals["Andres"]["pos"])
         
     with c2:
         st.markdown("#### 👤 Conor Metrics")
-        c_iam = st.number_input("Conor - IAM Deals", min_value=0, value=st.session_state["inputs"]["Conor"]["iam"], key="n_c_iam")
-        c_dia = st.number_input("Conor - DIA Deals", min_value=0, value=st.session_state["inputs"]["Conor"]["dia"], key="n_c_dia_key")
-        c_central = st.number_input("Conor - Central Assisted", min_value=0, value=st.session_state["inputs"]["Conor"]["central"], key="n_c_cent_as")
-        c_direct = st.number_input("Conor - DIRECT MM Units", min_value=0, value=st.session_state["inputs"]["Conor"]["direct"], key="n_c_dir")
-        c_pos = st.number_input("Conor - POS Signed", min_value=0, value=st.session_state["inputs"]["Conor"]["pos"], key="n_c_pos")
+        c_iam = st.number_input("Conor - IAM Deals", min_value=0, value=default_vals["Conor"]["iam"])
+        c_dia = st.number_input("Conor - DIA Deals", min_value=0, value=default_vals["Conor"]["dia"])
+        c_central = st.number_input("Conor - Central Assisted", min_value=0, value=default_vals["Conor"]["central"])
+        c_direct = st.number_input("Conor - DIRECT MM Units", min_value=0, value=default_vals["Conor"]["direct"])
+        c_pos = st.number_input("Conor - POS Signed", min_value=0, value=default_vals["Conor"]["pos"])
 
     with c3:
         st.markdown("#### 🦅 Garrett (Manager & Personal Sales)")
-        g_direct = st.number_input("Garrett - Personal DIRECT MM Units", min_value=0, value=st.session_state["inputs"]["Garrett"]["direct"], key="n_g_dir")
-        g_pos_personal = st.number_input("Garrett - Personal POS Signed", min_value=0, value=st.session_state["inputs"]["Garrett"]["pos"], key="n_g_pos_pers")
+        g_direct = st.number_input("Garrett - Personal DIRECT MM Units", min_value=0, value=default_vals["Garrett"]["direct"])
+        g_pos_personal = st.number_input("Garrett - Personal POS Signed", min_value=0, value=default_vals["Garrett"]["pos"])
 
     # --- PROCESS CALCULATIONS ---
     global_team_usa_pos = a_pos + c_pos + g_pos_personal
     
-    # Andres
+    # Andres Calculations
     a_total_cars = a_iam + a_dia + a_central + a_direct
     a_payout_pct = get_individual_payout_percentage(a_total_cars)
     a_hist_money = (a_payout_pct / 100.0) * BONUS_100_ANDRES
@@ -189,7 +170,7 @@ else:
     a_total_bonus = a_hist_money + a_super_bonus
     a_bonus_per_car = a_total_bonus / a_total_cars if a_total_cars > 0 else 0
     
-    # Conor
+    # Conor Calculations
     c_total_cars = c_iam + c_dia + c_central + c_direct
     c_payout_pct = get_individual_payout_percentage(c_total_cars)
     c_hist_money = (c_payout_pct / 100.0) * BONUS_100_CONOR
@@ -198,18 +179,16 @@ else:
     c_total_bonus = c_hist_money + c_super_bonus
     c_bonus_per_car = c_total_bonus / c_total_cars if c_total_cars > 0 else 0
     
-    # Garrett
+    # Garrett Calculations
     g_team_cars = a_total_cars + c_total_cars
     g_mms_pos = a_pos + c_pos
     g_payout_pct = get_manager_payout_percentage(g_team_cars)
     g_hist_money = (g_payout_pct / 100.0) * BONUS_100_GARRETT
     
-    # Track A
     mms_only_direct = a_direct + c_direct
     g_multiplier = get_garrett_hunter_multiplier(mms_only_direct) if g_mms_pos >= 10 else 0.0
     g_team_growth_bonus = g_hist_money * g_multiplier
     
-    # Track B
     g_hunter_personal_eligible = g_direct > 125 and global_team_usa_pos >= 15
     g_personal_hunter_bonus = max(0, g_direct - 125) * 100 if g_hunter_personal_eligible else 0
     
@@ -284,10 +263,3 @@ else:
     col1.metric(label="Total Bonuses Distributed", value=f"${total_bonuses_paid:,.2f}")
     col2.metric(label="Total Team Volume", value=f"{total_unique_cars} cars")
     col3.metric(label="📉 GLOBAL BONUS COST PER CAR", value=f"${global_bonus_per_car:,.2f} / car")
-
-    # --- ALERTS ---
-    st.markdown("### 🔔 Management Alerts")
-    if g_direct > 125 and global_team_usa_pos < 15:
-        st.error(f"🚨 **Garrett Individual Hunter Alert:** Garrett has {g_direct} personal cars, but Team USA signed only {global_team_usa_pos}/15 POS. Individual Cash Accelerator is LOCKED.")
-    elif g_personal_hunter_bonus > 0:
-        st.success(f"🎯 **Garrett Individual Success:** Team Goal of 15 POS met! Individual Cash Accelerator unlocked: +${g_personal_hunter_bonus:,.2f}.")
