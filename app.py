@@ -93,7 +93,7 @@ else:
     st.markdown("### 📂 Data Import (Optionnel)")
     uploaded_file = st.file_uploader("Glisse ton fichier Excel (.xlsx) ou CSV (.csv) ici :", type=["csv", "xlsx"])
     
-    # Default baseline values (used if no file is uploaded)
+    # Default baseline values
     data_source = "Saisie Manuelle"
     inputs = {
         "Andres": {"iam": 40, "dia": 30, "central": 0, "direct": 126, "pos": 5},
@@ -109,35 +109,48 @@ else:
             else:
                 df = pd.read_excel(uploaded_file)
             
-            # Clean dataframe columns to avoid spacing issues
-            df.columns = [c.strip() for c in df.columns]
+            # NETTOYAGE AGRESSIF : On enleve les espaces, les underscores et on met tout en minuscules pour comparer
+            df.columns = [str(c).strip().replace('_', '').replace(' ', '').lower() for c in df.columns]
             
-            # Check required columns
-            required_cols = ["Collaborateur", "IAM", "DIA", "Central_Assisted", "Direct_Sales", "POS_Signed"]
-            if all(col in df.columns for col in required_cols):
+            # Dictionnaire de correspondance des colonnes nettoyées
+            mapping = {
+                "collaborateur": "collaborateur",
+                "iam": "iam",
+                "dia": "dia",
+                "centralassisted": "central_assisted",
+                "directsales": "direct_sales",
+                "possigned": "pos_signed"
+            }
+            
+            # Verifier si toutes les colonnes nécessaires sont détectées (sous leur forme nettoyée)
+            required_cleaned = ["collaborateur", "iam", "dia", "centralassisted", "directsales", "possigned"]
+            
+            if all(rc in df.columns for rc in required_cleaned):
                 data_source = f"Fichier Importé ({uploaded_file.name})"
                 
-                # Map dataframe rows to data structure
+                # Nettoyer également le texte à l'intérieur de la colonne collaborateur
+                df["collaborateur"] = df["collaborateur"].astype(str).str.strip().str.lower()
+                
                 for name in ["Andres", "Conor", "Garrett"]:
-                    row = df[df["Collaborateur"].str.strip() == name]
+                    row = df[df["collaborateur"] == name.lower()]
                     if not row.empty:
                         inputs[name] = {
-                            "iam": int(row["IAM"].values[0]),
-                            "dia": int(row["DIA"].values[0]),
-                            "central": int(row["Central_Assisted"].values[0]),
-                            "direct": int(row["Direct_Sales"].values[0]),
-                            "pos": int(row["POS_Signed"].values[0])
+                            "iam": int(pd.to_numeric(row["iam"].values[0], errors='coerce') or 0),
+                            "dia": int(pd.to_numeric(row["dia"].values[0], errors='coerce') or 0),
+                            "central": int(pd.to_numeric(row["centralassisted"].values[0], errors='coerce') or 0),
+                            "direct": int(pd.to_numeric(row["directsales"].values[0], errors='coerce') or 0),
+                            "pos": int(pd.to_numeric(row["possigned"].values[0], errors='coerce') or 0)
                         }
                 st.success(f"✅ Données chargées avec succès depuis : {data_source}")
             else:
-                st.error("❌ Erreur de format : Assurez-vous que le fichier contient exactement les colonnes : Collaborateur, IAM, DIA, Central_Assisted, Direct_Sales, POS_Signed")
+                st.error("❌ Erreur de format : Les colonnes de votre fichier doivent être : Collaborateur, IAM, DIA, Central_Assisted, Direct_Sales, POS_Signed")
         except Exception as e:
             st.error(f"❌ Impossible de lire le fichier : {str(e)}")
 
     st.markdown("---")
     st.subheader(f"🚗 Performance Inputs ({data_source})")
     
-    # Render input boxes (pre-populated with file data if available, otherwise default manual values)
+    # Render input boxes
     c1, c2, c3 = st.columns(3)
     with c1:
         st.markdown("#### 👤 Andres Metrics")
@@ -187,12 +200,12 @@ else:
     g_payout_pct = get_manager_payout_percentage(g_team_cars)
     g_hist_money = (g_payout_pct / 100.0) * BONUS_100_GARRETT
     
-    # Track A: Multiplier (MM Only Direct volume, condition 10 POS MM)
+    # Track A: Multiplier
     mms_only_direct = a_direct + c_direct
     g_multiplier = get_garrett_hunter_multiplier(mms_only_direct) if g_mms_pos >= 10 else 0.0
     g_team_growth_bonus = g_hist_money * g_multiplier
     
-    # Track B: Cash ($100/car, condition 15 Global POS)
+    # Track B: Cash
     g_hunter_personal_eligible = g_direct > 125 and global_team_usa_pos >= 15
     g_personal_hunter_bonus = max(0, g_direct - 125) * 100 if g_hunter_personal_eligible else 0
     
