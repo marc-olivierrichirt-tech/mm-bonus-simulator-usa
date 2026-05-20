@@ -87,7 +87,6 @@ else:
         key=f"csv_uploader_{st.session_state['uploader_key']}"
     )
     
-    # Valeurs par défaut (Remises à 0 automatique au refresh)
     data_source = "Saisie Manuelle"
     default_vals = {
         "Andres": {"iam": 0, "dia": 0, "central": 0, "direct": 0, "pos": 0},
@@ -103,7 +102,6 @@ else:
                 df = pd.read_excel(uploaded_file)
             
             df = df.dropna(how='all')
-            # Nettoyage strict des en-têtes de colonnes
             df.columns = [str(c).strip().replace('_', '').replace(' ', '').lower() for c in df.columns]
             
             required_cleaned = ["collaborateur", "iam", "dia", "centralassisted", "directsales", "possigned"]
@@ -115,7 +113,6 @@ else:
                 st.info("🔍 **Aperçu technique du tableau lu par la machine :**")
                 st.dataframe(df[required_cleaned])
                 
-                # Remplissage des valeurs extraites du fichier
                 for name in ["Andres", "Conor", "Garrett"]:
                     row = df[df["collaborateur"] == name.lower()]
                     if not row.empty:
@@ -135,7 +132,6 @@ else:
     st.markdown("---")
     st.subheader(f"🚗 Performance Inputs ({data_source})")
     
-    # Création des formulaires de saisie synchronisés
     c1, c2, c3 = st.columns(3)
     with c1:
         st.markdown("#### 👤 Andres Metrics")
@@ -156,7 +152,7 @@ else:
     with c3:
         st.markdown("#### 🦅 Garrett (Manager & Personal Sales)")
         g_direct = st.number_input("Garrett - Personal DIRECT MM Units", min_value=0, value=default_vals["Garrett"]["direct"])
-        g_pos_personal = st.number_input("Garrett - Personal POS Signed", min_value=0, value=default_vals["Garrett"]["pos"])
+        g_pos_personal = st.number_input("POS VAAS TEAM SIGNED", min_value=0, value=default_vals["Garrett"]["pos"])
 
     # --- PROCESS CALCULATIONS ---
     global_team_usa_pos = a_pos + c_pos + g_pos_personal
