@@ -149,13 +149,17 @@ else:
         c_direct = st.number_input("Conor - DIRECT MM Units", min_value=0, value=default_vals["Conor"]["direct"])
         c_pos = st.number_input("Conor - POS Signed", min_value=0, value=default_vals["Conor"]["pos"])
 
+    # Calcul automatique de la somme pour l'équipe VaaS (Andres POS + Conor POS)
+    team_vaas_sum = a_pos + c_pos
+
     with c3:
         st.markdown("#### 🦅 Garrett (Manager & Personal Sales)")
         g_direct = st.number_input("Garrett - Personal DIRECT MM Units", min_value=0, value=default_vals["Garrett"]["direct"])
-        g_pos_personal = st.number_input("POS VAAS TEAM SIGNED", min_value=0, value=default_vals["Garrett"]["pos"])
+        g_pos_personal = st.number_input("POS VAAS TEAM SIGNED", min_value=0, value=team_vaas_sum)
 
     # --- PROCESS CALCULATIONS ---
-    global_team_usa_pos = a_pos + c_pos + g_pos_personal
+    # Global Team USA correspond maintenant à la somme entrée/calculée dans la case d'équipe VaaS
+    global_team_usa_pos = g_pos_personal
     
     # Andres Calculations
     a_total_cars = a_iam + a_dia + a_central + a_direct
