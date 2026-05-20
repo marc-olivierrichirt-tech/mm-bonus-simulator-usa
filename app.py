@@ -72,6 +72,22 @@ if app_mode == "1. Rules Bible (Règles)":
         }
         st.table(pd.DataFrame(mgr_grid_data))
 
+    st.markdown("---")
+    st.header("2. Hunter Accelerator & Growth Scale")
+    
+    st.subheader("🤠 For Mobility Managers (Andres & Conor)")
+    st.write("• Triggers from **Vehicle #126** onwards, **ONLY** on **Direct MM** units.")
+    st.write("• **Condition:** Must personally sign at least **5 POS** during the quarter.")
+    
+    st.subheader("🦅 For the Manager (Garrett) - Dual Hunter Track")
+    st.write("**Track A: Team Growth Multiplier (Managership)**")
+    st.write("• Multiplier based **ONLY** on the Combined Direct MM Units of Andres + Conor.")
+    st.write("• *Condition:* The 2 MMs combined must sign at least **10 POS**.")
+    st.write("")
+    st.write("**Track B: Personal Cash Accelerator (Hunter)**")
+    st.write("• Garrett earns **$100/car** from his **126th personal vehicle**.")
+    st.write("• **STRICT GLOBAL CONDITION:** This bonus is only unlocked if Team USA (Andres + Conor + Garrett) signs a minimum of **15 POS total**.")
+
 # ==========================================
 # TAB 2: LIVE CALCULATOR
 # ==========================================
@@ -149,7 +165,7 @@ else:
         c_direct = st.number_input("Conor - DIRECT MM Units", min_value=0, value=default_vals["Conor"]["direct"])
         c_pos = st.number_input("Conor - POS Signed", min_value=0, value=default_vals["Conor"]["pos"])
 
-    # Calcul automatique de la somme pour l'équipe VaaS (Andres POS + Conor POS)
+    # Somme automatique pour l'équipe VaaS
     team_vaas_sum = a_pos + c_pos
 
     with c3:
@@ -158,7 +174,6 @@ else:
         g_pos_personal = st.number_input("POS VAAS TEAM SIGNED", min_value=0, value=team_vaas_sum)
 
     # --- PROCESS CALCULATIONS ---
-    # Global Team USA correspond maintenant à la somme entrée/calculée dans la case d'équipe VaaS
     global_team_usa_pos = g_pos_personal
     
     # Andres Calculations
@@ -175,6 +190,7 @@ else:
     c_payout_pct = get_individual_payout_percentage(c_total_cars)
     c_hist_money = (c_payout_pct / 100.0) * BONUS_100_CONOR
     c_hunter_eligible = c_direct > 125 and c_pos >= 5
+    st.write(f"Conor Hunter Eligible debug: {c_hunter_eligible}") # A garder ou enlever si besoin
     c_super_bonus = max(0, c_direct - 125) * 100 if c_hunter_eligible else 0
     c_total_bonus = c_hist_money + c_super_bonus
     c_bonus_per_car = c_total_bonus / c_total_cars if c_total_cars > 0 else 0
