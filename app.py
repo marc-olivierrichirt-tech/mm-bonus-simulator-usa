@@ -70,26 +70,24 @@ if app_mode == "1. Rules Bible (Règles)":
     st.header("2. Hunter Accelerator & Growth Scale")
     
     st.subheader("🤠 For Mobility Managers (Andres & Conor)")
-    st.write("• Triggers from **Vehicle #126** onwards, **ONLY** on **Direct MM** units (100% autonomous).")
-    st.write("• **Hard Condition:** Must sign at least **5 POS** during the quarter. Otherwise, Hunter Bonus = $0.")
+    st.write("• Triggers from **Vehicle #126** onwards, **ONLY** on **Direct MM** units.")
+    st.write("• **Condition:** Must personally sign at least **5 POS** during the quarter.")
     
-    st.subheader("🦅 For the Manager (Garrett) - Dual Hunter Track (No Double-Dipping)")
-    st.write("**Track A: Team Direct Growth Scale (Multiplier)**")
-    st.write("Garrett receives an extra % on his Historical Bonus based **ONLY** on the **Combined Direct MM Units sold by his MMs (Andres + Conor)**:")
-    st.write("• **252 to 377 MM Direct Cars:** +25% | **378 to 503 MM Direct Cars:** +50% | **504 to 629 MM Direct Cars:** +75%")
-    st.write("• **630 to 755 MM Direct Cars:** +100% | **756 to 881 MM Direct Cars:** +125% | **882+ MM Direct Cars:** +150%")
-    st.write("• *Condition:* Team must sign at least **10 POS combined** (Andres + Conor) to activate this scale.")
+    st.subheader("🦅 For the Manager (Garrett) - Dual Hunter Track")
+    st.write("**Track A: Team Growth Multiplier (Managership)**")
+    st.write("• Multiplier based **ONLY** on the Combined Direct MM Units of Andres + Conor.")
+    st.write("• *Condition:* The 2 MMs combined must sign at least **10 POS**.")
     st.write("")
-    st.write("**Track B: Personal Direct Sales (Cash Accelerator)**")
-    st.write("• If Garrett does personal direct sales, he earns **$100/car** starting from his **126th personal vehicle**.")
-    st.write("• *Hard Condition:* Must personally sign at least **5 personal POS** during the quarter to unlock this track. If < 5 POS, Hunter Bonus = $0.")
+    st.write("**Track B: Personal Cash Accelerator (Hunter)**")
+    st.write("• Garrett earns **$100/car** from his **126th personal vehicle**.")
+    st.write("• **STRICT GLOBAL CONDITION:** This bonus is only unlocked if Team USA (Andres + Conor + Garrett) signs a minimum of **15 POS total**.")
 
 # ==========================================
 # TAB 2: LIVE CALCULATOR
 # ==========================================
 else:
     st.title("📊 Live Performance & Commission Calculator")
-    st.write("Enter quarterly volumes to calculate team historical payouts, hunter bonuses, and vehicle bonus metrics.")
+    st.write("Enter quarterly volumes to calculate payouts. Salaries are hidden.")
     
     st.markdown("---")
     st.subheader("🚗 Performance Inputs")
@@ -117,6 +115,9 @@ else:
         g_pos_personal = st.number_input("Garrett - Personal POS Signed", min_value=0, value=0, key="n_g_pos_pers")
 
     # --- PROCESS CALCULATIONS ---
+    # Global Team POS for Garrett's rule
+    global_team_usa_pos = a_pos + c_pos + g_pos_personal
+    
     # Andres
     a_total_cars = a_iam + a_dia + a_central + a_direct
     a_payout_pct = get_individual_payout_percentage(a_total_cars)
@@ -135,33 +136,32 @@ else:
     c_total_bonus = c_hist_money + c_super_bonus
     c_bonus_per_car = c_total_bonus / c_total_cars if c_total_cars > 0 else 0
     
-    # Garrett (Manager & Team)
+    # Garrett
     g_team_cars = a_total_cars + c_total_cars
-    g_team_pos = a_pos + c_pos
+    g_mms_pos = a_pos + c_pos
     g_payout_pct = get_manager_payout_percentage(g_team_cars)
     g_hist_money = (g_payout_pct / 100.0) * BONUS_100_GARRETT
     
-    # Garrett Track A: MM-Only Growth Multiplier (Excludes g_direct)
-    mms_only_direct_sales = a_direct + c_direct
-    g_multiplier = get_garrett_hunter_multiplier(mms_only_direct_sales) if g_team_pos >= 10 else 0.0
+    # Track A: Multiplier (MM Only Direct volume, condition 10 POS MM)
+    mms_only_direct = a_direct + c_direct
+    g_multiplier = get_garrett_hunter_multiplier(mms_only_direct) if g_mms_pos >= 10 else 0.0
     g_team_growth_bonus = g_hist_money * g_multiplier
     
-    # Garrett Track B: Personal Hunter Accelerator ($100/car > 125, strict condition)
-    g_hunter_personal_eligible = g_direct > 125 and g_pos_personal >= 5
+    # Track B: Cash ($100/car, condition 15 Global POS)
+    g_hunter_personal_eligible = g_direct > 125 and global_team_usa_pos >= 15
     g_personal_hunter_bonus = max(0, g_direct - 125) * 100 if g_hunter_personal_eligible else 0
     
-    # Garrett Total Combined
     g_total_bonus = g_hist_money + g_team_growth_bonus + g_personal_hunter_bonus
     g_bonus_per_car = g_total_bonus / g_team_cars if g_team_cars > 0 else 0
 
-    # Total Company Investment Statistics
+    # Company Stats
     total_bonuses_paid = a_total_bonus + c_total_bonus + g_total_bonus
     total_unique_cars = g_team_cars + g_direct
     global_bonus_per_car = total_bonuses_paid / total_unique_cars if total_unique_cars > 0 else 0
 
     # --- OUTPUT TABLE ---
     st.markdown("---")
-    st.subheader("🏆 Summary Commission Breakdown (Payout Only)")
+    st.subheader("🏆 Summary Commission Breakdown")
     
     a_over = max(0, a_direct - 125)
     c_over = max(0, c_direct - 125)
@@ -173,8 +173,8 @@ else:
             "Historical Bonus Payout %",
             "Historical Bonus Payout ($)",
             "Direct MM Units (Counted)",
-            "POS Status (Team / Indiv)",
-            "Hunter Accelerator Reward Info",
+            "POS Count (Total / Individual)",
+            "Hunter Accelerator Status",
             "Hunter Accelerator Payout ($)",
             "TOTAL QUARTER COMMISSION ($)",
             "📊 BONUS PAYOUT PER CAR"
@@ -184,8 +184,8 @@ else:
             f"{a_payout_pct}%",
             f"${a_hist_money:,.2f}",
             f"{a_direct} cars",
-            f"{a_pos} / 5 POS",
-            f"{a_over} {'car' if a_over <= 1 else 'cars'} over 125",
+            f"{a_pos} / 5 personal POS",
+            f"{a_over} car(s) over 125",
             f"${a_super_bonus:,.2f}",
             f"${a_total_bonus:,.2f}",
             f"${a_bonus_per_car:,.2f} / car"
@@ -195,8 +195,8 @@ else:
             f"{c_payout_pct}%",
             f"${c_hist_money:,.2f}",
             f"{c_direct} cars",
-            f"{c_pos} / 5 POS",
-            f"{c_over} {'car' if c_over <= 1 else 'cars'} over 125",
+            f"{c_pos} / 5 personal POS",
+            f"{c_over} car(s) over 125",
             f"${c_super_bonus:,.2f}",
             f"${c_total_bonus:,.2f}",
             f"${c_bonus_per_car:,.2f} / car"
@@ -205,31 +205,27 @@ else:
             f"{g_team_cars} cars (Team Sum)",
             f"{g_payout_pct}%",
             f"${g_hist_money:,.2f}",
-            f"{g_direct} personal / {mms_only_direct_sales} MMs",
-            f"{g_team_pos} team / {g_pos_personal} personal POS",
-            f"+{g_multiplier*100:.0f}% MM Growth | {g_over} personal cars",
+            f"{g_direct} personal / {mms_only_direct} MMs",
+            f"{global_team_usa_pos} / 15 Team POS",
+            f"+{g_multiplier*100:.0f}% Team Growth",
             f"${g_team_growth_bonus + g_personal_hunter_bonus:,.2f}",
             f"${g_total_bonus:,.2f}",
             f"${g_bonus_per_car:,.2f} / car"
         ]
     }
-    
     st.table(pd.DataFrame(calc_data))
     
-    # --- GLOBAL METRICS CARD ---
+    # --- GLOBAL METRICS ---
     st.markdown("---")
     st.subheader("📊 Global Company Investment Metrics")
     col1, col2, col3 = st.columns(3)
     col1.metric(label="Total Bonuses Distributed", value=f"${total_bonuses_paid:,.2f}")
-    col2.metric(label="Total Team Volume (Unique Sales)", value=f"{total_unique_cars} cars")
-    col3.metric(label="📉 TOTAL BONUS COST PER CAR (GLOBAL)", value=f"${global_bonus_per_car:,.2f} / car")
+    col2.metric(label="Total Team Volume", value=f"{total_unique_cars} cars")
+    col3.metric(label="📉 GLOBAL BONUS COST PER CAR", value=f"${global_bonus_per_car:,.2f} / car")
 
-    # --- LIVE FEEDS ---
+    # --- ALERTS ---
     st.markdown("### 🔔 Management Alerts")
-    if g_team_pos < 10 and mms_only_direct_sales >= 252:
-        st.error(f"🚨 **Garrett Manager Warning:** MMs achieved {mms_only_direct_sales} Direct sales but signed only {g_team_pos}/10 POS. Garrett's Growth Multiplier is LOCKED.")
-    
-    if g_direct > 125 and g_pos_personal < 5:
-        st.warning(f"⚠️ **Garrett Personal Sales Warning:** Garrett sold {g_direct} personal cars (>125) but signed only {g_pos_personal}/5 personal POS. His individual $100/car bonus is LOCKED.")
+    if g_direct > 125 and global_team_usa_pos < 15:
+        st.error(f"🚨 **Garrett Individual Hunter Alert:** Garrett has {g_direct} personal cars, but Team USA signed only {global_team_usa_pos}/15 POS. Individual Cash Accelerator is LOCKED.")
     elif g_personal_hunter_bonus > 0:
-        st.success(f"🎯 **Garrett Individual Success:** Garrett unlocked his personal Hunter Accelerator! Adding ${g_personal_hunter_bonus:,.2f} ($100/car over 125).")
+        st.success(f"🎯 **Garrett Individual Success:** Team Goal of 15 POS met! Individual Cash Accelerator unlocked: +${g_personal_hunter_bonus:,.2f}.")
