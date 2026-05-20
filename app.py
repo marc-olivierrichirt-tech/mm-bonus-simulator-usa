@@ -87,35 +87,80 @@ if app_mode == "1. Rules Bible (Règles)":
 # ==========================================
 else:
     st.title("📊 Live Performance & Commission Calculator")
-    st.write("Enter quarterly volumes to calculate payouts. Salaries are hidden.")
+    st.write("Upload a file (Excel/CSV) or adjust variables manually to compute quarterly sales rewards.")
     
+    # --- FILE UPLOADER COMPONENT ---
+    st.markdown("### 📂 Data Import (Optionnel)")
+    uploaded_file = st.file_uploader("Glisse ton fichier Excel (.xlsx) ou CSV (.csv) ici :", type=["csv", "xlsx"])
+    
+    # Default baseline values (used if no file is uploaded)
+    data_source = "Saisie Manuelle"
+    inputs = {
+        "Andres": {"iam": 40, "dia": 30, "central": 0, "direct": 126, "pos": 5},
+        "Conor": {"iam": 35, "dia": 25, "central": 0, "direct": 126, "pos": 5},
+        "Garrett": {"iam": 0, "dia": 0, "central": 0, "direct": 0, "pos": 0}
+    }
+
+    # If file is uploaded, parse data dynamically
+    if uploaded_file is not None:
+        try:
+            if uploaded_file.name.endswith('.csv'):
+                df = pd.read_csv(uploaded_file)
+            else:
+                df = pd.read_excel(uploaded_file)
+            
+            # Clean dataframe columns to avoid spacing issues
+            df.columns = [c.strip() for c in df.columns]
+            
+            # Check required columns
+            required_cols = ["Collaborateur", "IAM", "DIA", "Central_Assisted", "Direct_Sales", "POS_Signed"]
+            if all(col in df.columns for col in required_cols):
+                data_source = f"Fichier Importé ({uploaded_file.name})"
+                
+                # Map dataframe rows to data structure
+                for name in ["Andres", "Conor", "Garrett"]:
+                    row = df[df["Collaborateur"].str.strip() == name]
+                    if not row.empty:
+                        inputs[name] = {
+                            "iam": int(row["IAM"].values[0]),
+                            "dia": int(row["DIA"].values[0]),
+                            "central": int(row["Central_Assisted"].values[0]),
+                            "direct": int(row["Direct_Sales"].values[0]),
+                            "pos": int(row["POS_Signed"].values[0])
+                        }
+                st.success(f"✅ Données chargées avec succès depuis : {data_source}")
+            else:
+                st.error("❌ Erreur de format : Assurez-vous que le fichier contient exactement les colonnes : Collaborateur, IAM, DIA, Central_Assisted, Direct_Sales, POS_Signed")
+        except Exception as e:
+            st.error(f"❌ Impossible de lire le fichier : {str(e)}")
+
     st.markdown("---")
-    st.subheader("🚗 Performance Inputs")
+    st.subheader(f"🚗 Performance Inputs ({data_source})")
     
+    # Render input boxes (pre-populated with file data if available, otherwise default manual values)
     c1, c2, c3 = st.columns(3)
     with c1:
         st.markdown("#### 👤 Andres Metrics")
-        a_iam = st.number_input("Andres - IAM Deals", min_value=0, value=40, key="n_a_iam")
-        a_dia = st.number_input("Andres - DIA Deals", min_value=0, value=30, key="n_a_dia")
-        a_central = st.number_input("Andres - Central Assisted", min_value=0, value=0, key="n_a_cent")
-        a_direct = st.number_input("Andres - DIRECT MM Units", min_value=0, value=126, key="n_a_dir")
-        a_pos = st.number_input("Andres - POS Signed", min_value=0, value=5, key="n_a_pos")
+        a_iam = st.number_input("Andres - IAM Deals", min_value=0, value=inputs["Andres"]["iam"], key="n_a_iam")
+        a_dia = st.number_input("Andres - DIA Deals", min_value=0, value=inputs["Andres"]["dia"], key="n_a_dia")
+        a_central = st.number_input("Andres - Central Assisted", min_value=0, value=inputs["Andres"]["central"], key="n_a_cent")
+        a_direct = st.number_input("Andres - DIRECT MM Units", min_value=0, value=inputs["Andres"]["direct"], key="n_a_dir")
+        a_pos = st.number_input("Andres - POS Signed", min_value=0, value=inputs["Andres"]["pos"], key="n_a_pos")
         
     with c2:
         st.markdown("#### 👤 Conor Metrics")
-        c_iam = st.number_input("Conor - IAM Deals", min_value=0, value=35, key="n_c_iam")
-        c_dia = st.number_input("Conor - DIA Deals", min_value=0, value=25, key="n_c_cent")
-        c_central = st.number_input("Conor - Central Assisted", min_value=0, value=0, key="n_c_cent_as")
-        c_direct = st.number_input("Conor - DIRECT MM Units", min_value=0, value=126, key="n_c_dir")
-        c_pos = st.number_input("Conor - POS Signed", min_value=0, value=5, key="n_c_pos")
+        c_iam = st.number_input("Conor - IAM Deals", min_value=0, value=inputs["Conor"]["iam"], key="n_c_iam")
+        c_dia = st.number_input("Conor - DIA Deals", min_value=0, value=inputs["Conor"]["dia"], key="n_c_cent")
+        c_central = st.number_input("Conor - Central Assisted", min_value=0, value=inputs["Conor"]["central"], key="n_c_cent_as")
+        c_direct = st.number_input("Conor - DIRECT MM Units", min_value=0, value=inputs["Conor"]["direct"], key="n_c_dir")
+        c_pos = st.number_input("Conor - POS Signed", min_value=0, value=inputs["Conor"]["pos"], key="n_c_pos")
 
     with c3:
         st.markdown("#### 🦅 Garrett (Manager & Personal Sales)")
-        g_direct = st.number_input("Garrett - Personal DIRECT MM Units", min_value=0, value=0, key="n_g_dir")
-        g_pos_personal = st.number_input("Garrett - Personal POS Signed", min_value=0, value=0, key="n_g_pos_pers")
+        g_direct = st.number_input("Garrett - Personal DIRECT MM Units", min_value=0, value=inputs["Garrett"]["direct"], key="n_g_dir")
+        g_pos_personal = st.number_input("Garrett - Personal POS Signed", min_value=0, value=inputs["Garrett"]["pos"], key="n_g_pos_pers")
 
     # --- PROCESS CALCULATIONS ---
-    # Global Team POS for Garrett's rule
     global_team_usa_pos = a_pos + c_pos + g_pos_personal
     
     # Andres
