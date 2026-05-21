@@ -90,7 +90,6 @@ if app_mode == "1. Rules Bible (Règles)":
         st.write("• Based **ONLY** on the Combined Direct MM Units of Andres + Conor.")
         st.write("• *Condition:* The 2 MMs combined must sign at least **10 POS**.")
         
-        # Le tableau d'échelle du Booster de Garrett
         garrett_booster_grid = {
             "Combined MMs Direct Volume": ["0 - 251 units", "252 - 377 units", "378 - 503 units", "504 - 629 units", "630 - 755 units", "756 - 881 units", "882+ units"],
             "Bonus Multiplier Added": ["+0% (None)", "+25%", "+50%", "+75%", "+100%", "+125%", "+150% (Cap)"]
@@ -179,7 +178,7 @@ else:
         c_direct = st.number_input("Conor - DIRECT MM Units", min_value=0, value=default_vals["Conor"]["direct"])
         c_pos = st.number_input("Conor - POS Signed", min_value=0, value=default_vals["Conor"]["pos"])
 
-    # Somme automatique pour l'équipe VaaS
+    # Somme automatique pour l'équipe VaaS (POS d'Andres + Conor)
     team_vaas_sum = a_pos + c_pos
 
     with c3:
@@ -210,14 +209,16 @@ else:
     
     # Garrett Calculations
     g_team_cars = a_total_cars + c_total_cars
-    g_mms_pos = a_pos + c_pos
+    g_mms_pos = a_pos + c_pos  # POS combinés des MMs pour sa condition Track A
     g_payout_pct = get_manager_payout_percentage(g_team_cars)
     g_hist_money = (g_payout_pct / 100.0) * BONUS_100_GARRETT
     
+    # Track A : Calcul exact basé STRICTEMENT sur le volume Direct cumulé d'Andres et Conor
     mms_only_direct = a_direct + c_direct
     g_multiplier = get_garrett_hunter_multiplier(mms_only_direct) if g_mms_pos >= 10 else 0.0
     g_team_growth_bonus = g_hist_money * g_multiplier
     
+    # Track B : Accélérateur personnel à $100/voiture au-dessus de 125 personal sales
     g_hunter_personal_eligible = g_direct > 125 and global_team_usa_pos >= 15
     g_personal_hunter_bonus = max(0, g_direct - 125) * 100 if g_hunter_personal_eligible else 0
     
